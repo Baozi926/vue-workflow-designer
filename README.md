@@ -1,24 +1,20 @@
-# vue-workflow-designer
+# vue workflow desinger
 
-## Project setup
-```
-npm install
-```
+基于vue + jsplump的工作流设计器
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
 
-### Compiles and minifies for production
-```
-npm run build
-```
+# 功能
 
-### Lints and fixes files
-```
-npm run lint
-```
+✅ 节点编辑
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+✅ 线标签编辑
+
+# TODO
+
+✅ 流程检测
+
+✅ 连线校验
+
+# screenshot
+
+<img src="./screenshot.png"></img>
