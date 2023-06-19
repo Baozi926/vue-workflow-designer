@@ -24,7 +24,7 @@
 
     .node-item-label {
         color: black;
-        z-index: 100000;
+        z-index: 2000;
     }
 
     .jtk-connector.selected {
@@ -141,12 +141,11 @@
             <div class="row toolbox">
 
                 <div class="start">
-                    <ElButton @click="clearAll" class="button">清空</ElButton>
+                    <ElButton @click="doClearAll" :icon="Refresh" class="button"> 清空</ElButton>
+                    <ElButton @click="doUndo" :icon="RefreshLeft" class="button">撤销</ElButton>
+                    <ElButton @click="doRedo" :icon="RefreshRight" class="button">重做</ElButton>
 
-                    <ElButton @click="doUndo" class="button">撤销</ElButton>
-                    <ElButton @click="doRedo" class="button">重做</ElButton>
-
-                    <ElButton @click="deleteNodeOrLine" class="button">删除</ElButton>
+                    <ElButton type="danger" :icon="Delete" @click="deleteNodeOrLine" class="button">删除</ElButton>
                 </div>
                 <div class="main"></div>
                 <div class="end">
@@ -154,6 +153,9 @@
                     <ElButton @click="loadConfigExample_1" class="button">载入配置1</ElButton>
                     <ElButton @click="loadConfigExample_2" class="button">载入配置2</ElButton>
                     <ElButton @click="loadConfigExample_3" class="button">载入配置3</ElButton>
+
+                    <ElButton @click="doAutoLayoutWorkFlow" class="button">格式化布局</ElButton>
+                    <ElButton @click="doCheckWorkFlow" class="button">流程检测</ElButton>
                 </div>
             </div>
 
@@ -208,8 +210,9 @@ import { uuid } from "./Util";
 import { NodeConfig, LineConfig } from "./types";
 import PropertyPanel from "./PropertyPanel.vue";
 import LinePanel from "./LinePanel.vue";
-
+import { Delete, Refresh, RefreshLeft, RefreshRight } from '@element-plus/icons-vue'
 import { flowConfig_example_a, flowConfig, flowConfig_example_b } from './tempData'
+import { ElMessage } from 'element-plus'
 
 
 /**
@@ -235,6 +238,9 @@ const copyToClipboard = (str) => {
     document.execCommand("copy");
     document.body.removeChild(el);
 };
+
+
+
 
 const copyConfig = () => {
     const config = {
@@ -326,6 +332,25 @@ const setActiveNode = (item) => {
     }
 };
 
+
+const doCheckWorkFlow = () => {
+
+
+    jsPlumbService.checkWorkflow({
+        nodeList: data.nodeList,
+        connections: data.connections
+    })
+}
+
+const doAutoLayoutWorkFlow = () => {
+    const config = jsPlumbService.autoLayoutFlow({
+        nodeList: data.nodeList,
+        connections: data.connections
+    })
+
+    loadConfig(config)
+}
+
 const setActiveLine = (conn) => {
     let lineData;
 
@@ -362,14 +387,23 @@ const setActiveLine = (conn) => {
 };
 
 
+const doClearAll = () => {
+    updateMemory()
+
+    clearAll();
+}
+
+
+/**
+ * 删除所有
+ * 
+*/
 const clearAll = () => {
 
     jsPlumbService.clearAll()
     data.nodeList = []
 
     return new Promise((resolve) => {
-
-
         nextTick(() => {
             resolve(true)
         })
@@ -395,7 +429,14 @@ const loadConfigExample_1 = () => {
 
 let loadingNum = 0;
 
+/**
+ * 加载配置，绘出流程图
+ * @param clearActive 是否清楚当前选中
+ * 
+*/
 const loadConfig = async (config, clearActive = false) => {
+
+    jsPlumbService.setSuspendDrawing(true);
 
     // plumbIns.setSuspendDrawing(true, true);
     if (!jsPlumbService.plumbIns) {
@@ -424,10 +465,13 @@ const loadConfig = async (config, clearActive = false) => {
 
         await drawConnections(config.connections);
 
+        jsPlumbService.setSuspendDrawing(false);
 
         if (currentLoadingNum >= loadingNum) {
             jsPlumbService.setSuspendEvents(false)
         }
+
+
     })
 
 }
@@ -490,6 +534,9 @@ const doUndo = () => {
 
 const deleteNodeOrLine = () => {
 
+
+
+
     updateMemory()
 
     const activeLine = data.activeLine;
@@ -509,9 +556,32 @@ const deleteNodeOrLine = () => {
 
     //节点
     if (activeNode) {
+
+        if (activeNode.type === 'start') {
+            ElMessage({
+                message: '不能删除起始节点',
+                type: 'warning',
+                duration: 0
+            })
+
+            return
+
+        }
+
+        if (activeNode.type === 'end') {
+            ElMessage({
+                message: '不能删除结束节点',
+                type: 'warning',
+            })
+
+            return
+        }
+
+
         const lines = plumbIns.getAllConnections();
         const deleteLines: any[] = [];
 
+        //找到与节点相连的需要删除的线
         lines.forEach((line) => {
             const activeNodeId = activeNode.id;
             if (line.sourceId === activeNodeId || line.targetId === activeNodeId) {
@@ -519,10 +589,12 @@ const deleteNodeOrLine = () => {
             }
         });
 
+        //删除线
         deleteLines.forEach((line) => {
             plumbIns.deleteConnection(line);
         });
 
+        //维护连接线数据集
         data.connections = data.connections.filter((v) => {
             if (v.source === activeNode.id || v.target === activeNode.id) {
                 return false;
@@ -531,6 +603,7 @@ const deleteNodeOrLine = () => {
             return true;
         });
 
+        //删除节点
         data.nodeList = data.nodeList.filter((v) => {
             return v.id !== activeNode.id;
         });
@@ -646,11 +719,15 @@ const initNodes = (nodeList) => {
 
 }
 
+const getFlowConfig = async () => {
+    return flowConfig
+}
+
 onMounted(async () => {
 
 
 
-    const flowConfig = jsPlumbService.getFlowConfig()
+    const flowConfig = await getFlowConfig()
 
     await initJsPlumb()
 

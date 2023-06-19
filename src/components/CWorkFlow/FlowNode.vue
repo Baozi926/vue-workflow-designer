@@ -14,7 +14,7 @@
                     <Promotion />
                 </el-icon>
                 <el-icon v-else>
-                    <Document />
+                    <UserFilled />
                 </el-icon>
 
 
@@ -45,9 +45,8 @@
 <script setup lang="ts">
 
 import { defineProps, onMounted, reactive, toRefs, ref, computed } from 'vue'
-import { Promotion, VideoPause, Document, UserFilled } from '@element-plus/icons-vue'
-// import { endPointStyle } from './config'
-// import jsPlumbService from './jsPlumbService'
+import { Promotion, VideoPause, UserFilled } from '@element-plus/icons-vue'
+
 const nodeDom = ref<any>(null);
 
 
@@ -132,7 +131,7 @@ const { mouseEnter } = toRefs(data)
     border-radius: 4px;
     cursor: move;
     box-sizing: content-box;
-    z-index: 9995;
+    z-index: 2000;
 
     // border-color: transparent;
 
@@ -199,7 +198,7 @@ const { mouseEnter } = toRefs(data)
 
         &:hover {
             border: 1px solid rgb(48, 130, 242);
-            z-index: 9998;
+            z-index: 2000;
             border-width: 1px;
             box-shadow: 0 0 0 3px rgba(48, 129, 242, .2);
         }
@@ -211,7 +210,7 @@ const { mouseEnter } = toRefs(data)
     }
 
     &:hover {
-        z-index: 9998;
+        z-index: 2000;
 
         .delete-btn {
             display: block;
@@ -233,12 +232,8 @@ const { mouseEnter } = toRefs(data)
     }
 
     .node-anchor {
-        z-index: 9999;
+        z-index: 2000;
         cursor: crosshair;
-
-
-
-
 
         &.outer {
             display: flex;

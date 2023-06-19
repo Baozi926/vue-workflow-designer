@@ -5,6 +5,7 @@ export type NodeConfig = {
     left: Number;
     top: Number;
   };
+  type: string;
   fields?: Object[];
 };
 
