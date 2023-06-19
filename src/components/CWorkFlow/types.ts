@@ -12,7 +12,12 @@ export type LineConfig = {
   id: String | Number;
   source: String | Number;
   target: String | Number;
-  name?: String;
+  label?: String;
   conditions?: any[];
   remark?: String;
+};
+
+export type FlowConfig = {
+  nodeList: NodeConfig[];
+  connections: LineConfig[];
 };

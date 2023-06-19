@@ -19,6 +19,7 @@ export const jsplumbConnectOptions = {
   isTarget: true,
   // 动态锚点、提供了4个方向 Continuous、AutoDefault
   anchor: ["TopCenter", "RightMiddle", "BottomCenter", "LeftMiddle"],
+  byCode: true,
 };
 
 export const jsplumbSetting = {
@@ -66,23 +67,22 @@ export const jsplumbSetting = {
         location: 1,
       },
     ],
-    [
-      "Label",
-      {
-        location: 0.5,
-        id: "Label",
-        cssClass: "node-item-label",
-        visible: true,
-      },
-    ],
+    // [
+    //   "Label",
+    //   {
+    //     location: 0.5,
+    //     id: "MyLabel",
+    //     cssClass: "node-item-label",
+    //     visible: true,
+    //   },
+    // ],
     [
       "Custom",
       {
         location: 0.5,
         id: "LabelEditor",
         create: function (conn) {
-          // console.log(a,b)
-          const val = conn.getOverlay("Label").getLabel();
+          const val = conn.getLabel();
           const dom = window.document.createElement("input");
           dom.style.zIndex = 9999;
           dom.value = val;

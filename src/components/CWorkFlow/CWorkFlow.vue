@@ -1,5 +1,27 @@
 <style lang="scss">
 .workflow-layout {
+
+
+    .row {
+        display: flex;
+        flex-direction: row;
+
+        .main {
+            flex: 1
+        }
+
+        .end {
+            margin-left: auto;
+        }
+
+        align-items: center;
+    }
+
+    .caiwf-line-label {
+        color: black;
+        font-size: 12px;
+    }
+
     .node-item-label {
         color: black;
         z-index: 100000;
@@ -24,7 +46,7 @@
         font-size: 12px;
         text-align: center;
         border: none !important;
-        
+
     }
 }
 </style>
@@ -45,6 +67,10 @@
         box-shadow: rgba(6, 30, 53, 0.1) 0px 1px 0 0;
         border-bottom: 1px solid #ebecee;
         padding: 0 20px;
+
+        .toolbox {
+            width: 100%;
+        }
     }
 
     .main {
@@ -112,9 +138,29 @@
 <template>
     <div class="workflow-layout">
         <div class="head">
-            <ElButton @click="deleteNodeOrLine" class="button">删除</ElButton>
+            <div class="row toolbox">
 
-            <ElButton @click="copyConfig" class="button">拷贝配置</ElButton>
+                <div class="start">
+                    <ElButton @click="clearAll" class="button">清空</ElButton>
+
+                    <ElButton @click="doUndo" class="button">撤销</ElButton>
+                    <ElButton @click="doRedo" class="button">重做</ElButton>
+
+                    <ElButton @click="deleteNodeOrLine" class="button">删除</ElButton>
+                </div>
+                <div class="main"></div>
+                <div class="end">
+                    <ElButton @click="copyConfig" class="button">拷贝配置</ElButton>
+                    <ElButton @click="loadConfigExample_1" class="button">载入配置1</ElButton>
+                    <ElButton @click="loadConfigExample_2" class="button">载入配置2</ElButton>
+                    <ElButton @click="loadConfigExample_3" class="button">载入配置3</ElButton>
+                </div>
+            </div>
+
+
+
+
+
         </div>
 
         <div class="main">
@@ -128,7 +174,7 @@
             </div>
             <div class="flow_region" @click="onCanvasClick($event)">
                 <div id="flowWrap" ref="flowWrap" class="flow-wrap" @drop="onDrop($event)" @dragover="allowDrop($event)">
-                    <div id="flow-container">
+                    <div id="flow-container" ref="flowContainerRef">
                         <FlowNode @click="onFlowNodeClick($event, item)" :isActive="activeNode?.id === item.id"
                             v-for="item in data.nodeList" :id="item.id" :key="item.id" :node="item"
                             @setNodeName="setNodeName" @changeLineState="changeLineState" />
@@ -148,7 +194,8 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, onMounted, onUnmounted, nextTick, toRefs } from "vue";
+import { reactive, onMounted, onUnmounted, nextTick, toRefs, ref, watch } from "vue";
+import useMemoryEffect from './hooks/useMemoryEffect'
 import FlowNode from "./FlowNode.vue";
 import jsPlumbService from "./jsPlumbService";
 import {
@@ -161,11 +208,15 @@ import { uuid } from "./Util";
 import { NodeConfig, LineConfig } from "./types";
 import PropertyPanel from "./PropertyPanel.vue";
 import LinePanel from "./LinePanel.vue";
-import { flowConfig } from './tempData'
-// import 'element-plus/es/components/button/style/css'
-// import 'element-plus/es/components/input/style/css'
 
-// import { ElButton, ElInput } from 'element-plus'
+import { flowConfig_example_a, flowConfig, flowConfig_example_b } from './tempData'
+
+
+/**
+ * 流程节点容器
+ * 
+*/
+const flowContainerRef = ref<null | HTMLElement>();
 
 const onFlowNodeClick = (event, item) => {
     event.preventDefault();
@@ -204,7 +255,9 @@ const data: {
     activeNode?: NodeConfig | null;
     activeLine?: LineConfig | null;
 } = reactive({
-    ...flowConfig,
+    // ...flowConfig,
+    nodeList: [],
+    connections: [],
     menus: [
         {
             type: "start",
@@ -220,7 +273,7 @@ const data: {
         }, {
             type: "sendCopy",
             name: "抄送",
-        },{
+        }, {
             type: "childFlow",
             name: "子流程",
         },
@@ -250,12 +303,13 @@ const onCanvasClick = (event) => {
 
         if (labelEditor.visible) {
             const lineData = getLineDataByLineInstance(line);
-            lineData.name = labelEditor.canvas.value;
-            line.getOverlay('Label').setLabel(lineData.name)
-        }
-        ;
+            lineData.label = labelEditor.canvas.value;
+            line.setLabel({ "label": lineData.label, "labelStyle": {}, "location": 0.5, "cssClass": "caiwf-line-label added-by-editor" })
+        };
 
     });
+
+    console.log(JSON.parse(JSON.stringify(data.connections)))
 
 
 
@@ -292,11 +346,11 @@ const setActiveLine = (conn) => {
         if (line.id === conn?.id) {
             line.canvas.classList.add("selected");
             line.getOverlay('LabelEditor').setVisible(true);
-            line.getOverlay('Label').setVisible(false);
+            // line.getOverlay('MyLabel').setVisible(false);
         } else {
             line.canvas.classList.remove("selected");
             line.getOverlay('LabelEditor').setVisible(false);
-            line.getOverlay('Label').setVisible(true);
+            // line.getOverlay('MyLabel').setVisible(true);
         }
     });
 
@@ -307,13 +361,137 @@ const setActiveLine = (conn) => {
     // jsPlumb
 };
 
-onUnmounted(() => {
-    if (plumbIns) {
-        plumbIns.destroy();
+
+const clearAll = () => {
+
+    jsPlumbService.clearAll()
+    data.nodeList = []
+
+    return new Promise((resolve) => {
+
+
+        nextTick(() => {
+            resolve(true)
+        })
+    })
+}
+
+const loadConfigExample_2 = () => {
+
+
+    loadConfig(flowConfig_example_a, true)
+
+}
+
+const loadConfigExample_3 = () => {
+    loadConfig(flowConfig_example_b, true)
+}
+
+const loadConfigExample_1 = () => {
+
+    loadConfig(flowConfig, true)
+
+}
+
+let loadingNum = 0;
+
+const loadConfig = async (config, clearActive = false) => {
+
+    // plumbIns.setSuspendDrawing(true, true);
+    if (!jsPlumbService.plumbIns) {
+        throw new Error('plumbIns is null')
     }
+
+    //在加载的时候阻止监听事件
+    jsPlumbService.setSuspendEvents(true)
+
+    const currentLoadingNum = ++loadingNum
+
+
+    await clearAll()
+
+    data.nodeList = config.nodeList;
+
+    data.connections = config.connections;
+
+    if (clearActive) {
+        data.activeLine = null;
+        data.activeNode = null;
+    }
+
+    nextTick(async () => {
+        await initNodes(data.nodeList);
+
+        await drawConnections(config.connections);
+
+
+        if (currentLoadingNum >= loadingNum) {
+            jsPlumbService.setSuspendEvents(false)
+        }
+    })
+
+}
+
+onUnmounted(() => {
+    jsPlumbService.destroy()
 });
 
+
+
+const { updateMemory, clearMemory, undo, redo } = useMemoryEffect({
+    getData: () => {
+        return {
+            nodeList: data.nodeList,
+            connections: data.connections
+        }
+    }
+})
+
+const doRedo = () => {
+
+
+    const config = redo();
+
+
+    if (!config) {
+        console.log('没有历史记录')
+        return;
+
+    }
+
+    console.log('redo', config)
+
+
+    loadConfig(config)
+
+}
+
+const doUndo = () => {
+
+
+    const config = undo();
+
+
+    if (!config) {
+        console.log('没有历史记录')
+        return;
+
+    }
+
+
+    console.log('undo', config)
+
+
+    loadConfig(config,)
+
+}
+
+
+
 const deleteNodeOrLine = () => {
+
+    updateMemory()
+
     const activeLine = data.activeLine;
 
     //线
@@ -359,87 +537,155 @@ const deleteNodeOrLine = () => {
     }
 };
 
-onMounted(() => {
+const initJsPlumb = () => {
     jsPlumbService.setContainerId("flow-container");
 
     plumbIns = jsPlumbService.getInstance();
 
-    plumbIns.ready(function () {
-        plumbIns.importDefaults({ ...jsplumbSetting, Container: 'flow-container' });
-        plumbIns.setSuspendDrawing(false, true);
-
-        data.connections.forEach((v) => {
-            const conn = plumbIns.connect(
-                {
-                    id: v.id,
-                    // 对应上述基本概念
-                    source: v.source,
-                    target: v.target,
-                    // anchor: ['Left', 'Right', 'Top', 'Bottom', [0.3, 0, 0, -1], [0.7, 0, 0, -1], [0.3, 1, 0, 1], [0.7, 1, 0, 1]],
-                    //@ts-ignore
-                    // connector: ['StateMachine'],
-                    // endpoint: 'Blank',
-                    // overlays: [['Arrow', { width: 8, length: 8, location: 1 }]], // overlay
-                    // // 添加样式
-                    // paintStyle: { stroke: '#909399', strokeWidth: 2 }, // connector
-                    // endpointStyle: { fill: '#909399', outlineStroke: '#606266', outlineWidth: 1 } // endpoint
-                },
-                jsplumbConnectOptions
-            );
-
-            if (v.name) {
-                conn.getOverlay("Label").setLabel(v.name);
-            }
 
 
-        });
+    plumbIns.importDefaults({ ...jsplumbSetting });
 
-        data.nodeList.forEach((v) => {
-            initNode(v);
-        });
-
-        // 连线创建成功后，维护本地数据
-        plumbIns.bind("connection", (evt) => {
-            addLine(evt);
-        });
-        //   //连线双击删除事件
-        //   this.jsPlumb.bind("dblclick",(conn, originalEvent) => {
-        //     this.confirmDelLine(conn)
-        //   })
-        //断开连线后，维护本地数据
-        plumbIns.bind("connectionDetached", (evt) => {
-            deleLine(evt);
-        });
-
-        plumbIns.bind("click", (conn, originalEvent) => {
-            originalEvent.stopPropagation();
-            setActiveLine(conn);
-        });
+    plumbIns.unbind("connection");
+    // 连线创建成功后，维护本地数据
+    plumbIns.bind("connection", (evt, aa) => {
+        addLine(evt);
+        console.log('add line', evt, data.connections)
     });
+
+    // jsPlumbService.bind()
+
+    //   //连线双击删除事件
+    //   this.jsPlumb.bind("dblclick",(conn, originalEvent) => {
+    //     this.confirmDelLine(conn)
+    //   })
+    //断开连线后，维护本地数据
+    plumbIns.bind("connectionDetached", (evt) => {
+        deleteLineFromData(evt);
+        console.log('delete line', evt, data.connections);
+    });
+
+    plumbIns.bind("click", (conn, originalEvent) => {
+        originalEvent.stopPropagation();
+        setActiveLine(conn);
+    });
+
+    return new Promise((resolve) => {
+        plumbIns.ready(() => {
+            resolve(plumbIns)
+        })
+    })
+
+
+}
+
+
+/**
+ * 
+ * 绘制线
+ * 
+*/
+const drawConnection = (line) => {
+    const conn = plumbIns.connect(
+        {
+            id: line.id,
+            // 对应上述基本概念
+            source: line.source,
+            target: line.target,
+            label: line.label,
+            // ConnectionOverlays: [
+            //     ["Label", { label: "1", id: "MyLabel", cssClass: "aLabel", location: 0.15, }],
+            //     // ["Label", { label: "1", id: "label-2", cssClass: "aLabel", location: 0.85, }]
+            // ],
+            // anchor: ['Left', 'Right', 'Top', 'Bottom', [0.3, 0, 0, -1], [0.7, 0, 0, -1], [0.3, 1, 0, 1], [0.7, 1, 0, 1]],
+            //@ts-ignore
+            // connector: ['StateMachine'],
+            // endpoint: 'Blank',
+            // overlays: [
+            //     ["Label", { label: "FOO", visible: true ,id: "MyLabel",}]
+            // ]
+            // ,
+
+            // connectorOverlays: [
+            //     // ["Arrow", { width: 10, length: 30, location: 1, id: "arrow" }],
+            //     ["Label", { label: "foo", id: "MyLabel" }]
+            // ],
+
+            // overlay
+            // // 添加样式
+            // paintStyle: { stroke: '#909399', strokeWidth: 2 }, // connector
+            // endpointStyle: { fill: '#909399', outlineStroke: '#606266', outlineWidth: 1 } // endpoint
+        },
+        jsplumbConnectOptions
+    );
+
+    if (line.label) {
+        // conn.getOverlay("Label").setLabel(line.label);
+    }
+}
+
+/**
+ * 
+ * 
+*/
+const drawConnections = (connections) => {
+
+
+    connections.forEach((v) => {
+        drawConnection(v)
+    });
+}
+
+const initNodes = (nodeList) => {
+
+    const promises = nodeList.map((v) => {
+        return initNode(v);
+    });
+
+    return Promise.all(promises)
+
+}
+
+onMounted(async () => {
+
+
+
+    const flowConfig = jsPlumbService.getFlowConfig()
+
+    await initJsPlumb()
+
+
+
+    loadConfig(flowConfig)
+
+
+
 });
 
-const log = (...argument) => {
-    console.log(...argument);
-};
 
 const addLine = (line) => {
+    updateMemory()
+
     data.connections.push({
         source: line.source.id,
         target: line.target.id,
-        name: "连接线",
+        label: line.connection.getLabel(),
         id: uuid(),
         remark: "",
     });
-
-    log(data.connections);
 };
 
-const deleLine = (line) => {
+/**
+ * 
+ * 删除数据中的线
+ * 
+*/
+const deleteLineFromData = (line) => {
     data.connections = data.connections.filter((item) => {
         return !(item.source === line.sourceId && item.target === line.targetId);
     });
 
-    log(data.connections);
+
 };
 
 const setNodeName = () => { };
@@ -451,39 +697,51 @@ const dragstart = (evt, menu) => {
 };
 
 const addNode = (params) => {
+    updateMemory();
+
     data.nodeList.push(params);
     initNode(params);
 };
 
 const initNode = (params) => {
-    nextTick(() => {
-        const nodeId = params.id;
-        plumbIns.makeSource(nodeId, jsplumbSourceOptions);
-        plumbIns.makeTarget(nodeId, jsplumbTargetOptions);
 
-        plumbIns.draggable(nodeId, {
-            grid: [5, 5],
-            drag: (params) => {
-                // this.alignForLine(nodeId, params.pos)
-            },
-            start: () => { },
-            stop: (params) => {
-                const pos = params.pos;
-                // this.auxiliaryLine.isShowXLine = false
-                // this.auxiliaryLine.isShowYLine = false
-                // this.changeNodepos(nodeId, params.pos)
-                data.nodeList.some((vv) => {
-                    if (nodeId == vv.id) {
-                        vv.pos.left = pos[0];
-                        vv.pos.top = pos[1];
-                        return true;
-                    } else {
-                        return false;
-                    }
-                });
-            },
+    return new Promise((resolve) => {
+        nextTick(() => {
+            const nodeId = params.id;
+            plumbIns.makeSource(nodeId, jsplumbSourceOptions);
+            plumbIns.makeTarget(nodeId, jsplumbTargetOptions);
+
+
+            plumbIns.draggable(nodeId, {
+                containment: flowContainerRef.value?.id, //边界保护
+                grid: [5, 5],
+                drag: (params) => {
+                    // this.alignForLine(nodeId, params.pos)
+                },
+                start: () => { },
+                stop: (params) => {
+                    const pos = params.pos;
+
+                    updateMemory()
+
+                    data.nodeList.some((vv) => {
+                        if (nodeId == vv.id) {
+                            vv.pos.left = pos[0];
+                            vv.pos.top = pos[1];
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    });
+
+
+                },
+            });
+
+            resolve(true)
         });
-    });
+    })
+
 };
 
 const onDrop = (event) => {
