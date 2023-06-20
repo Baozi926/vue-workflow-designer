@@ -196,7 +196,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, onMounted, onUnmounted, nextTick, toRefs, ref, watch } from "vue";
+import { reactive, onMounted, onUnmounted, nextTick, toRefs, ref } from "vue";
 import useMemoryEffect from './hooks/useMemoryEffect'
 import FlowNode from "./FlowNode.vue";
 import {
