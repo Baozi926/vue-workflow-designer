@@ -270,11 +270,11 @@ const data: {
     menus: [
         {
             type: "start",
-            name: "开始",
+            name: "流程开始",
         },
         {
             type: "end",
-            name: "结束",
+            name: "流程结束",
         },
         {
             type: "node",
