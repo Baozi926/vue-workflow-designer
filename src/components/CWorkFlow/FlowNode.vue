@@ -1,7 +1,7 @@
 <template>
     <div ref="nodeDom" :id="node.id" class="node-item-wrapper" @mouseenter="showAnchor" @mouseleave="hideAnchor">
 
-        <div :class="['node-type-' + (node.type || 'node'), 'content', isActive ? 'active' : '']">
+        <div :class="['node-type-' + (node.type || 'node'), 'content', isActive ? 'active' : '', hasError ? 'error' : '']">
             <div class="start">
                 <el-icon v-if="node.type === 'start'">
 
@@ -16,13 +16,22 @@
                 <el-icon v-else>
                     <UserFilled />
                 </el-icon>
-
-
-
-
             </div>
             <div class="main">
                 {{ node.name }}
+            </div>
+            <div class="end">
+                <div v-if="node.errors && node.errors.length" class="errors">
+                    <el-tooltip placement="top">
+                        <template #content>
+                            <div class="error-msg" v-for=" error  in  node.errors ">{{ transErrorMsg(error) }}</div>
+                        </template>
+                        <el-icon class="error">
+                            <WarningFilled />
+                        </el-icon>
+                    </el-tooltip>
+                </div>
+
             </div>
 
 
@@ -44,8 +53,10 @@
 </template>
 <script setup lang="ts">
 
-import { defineProps, onMounted, reactive, toRefs, ref, computed } from 'vue'
-import { Promotion, VideoPause, UserFilled } from '@element-plus/icons-vue'
+import { defineProps, onMounted, reactive, toRef, ref, computed } from 'vue'
+
+import { Promotion, VideoPause, UserFilled, WarningFilled } from '@element-plus/icons-vue'
+import { NodeConfig, NodeError } from './types';
 
 const nodeDom = ref<any>(null);
 
@@ -62,17 +73,22 @@ const props = defineProps({
     isActive: Boolean
 })
 
-const node = props.node || {
-    name: "unnamed"
-}
-
-
-
+const node: NodeConfig = props.node as NodeConfig;
 
 let isInnerPointShow = computed({
     get: () => { return !props.isActive && data.mouseEnter },
     set: () => {
     }
+})
+
+const hasError = computed({
+    get: () => {
+        if (node.errors && node.errors.length) {
+            return true
+        }
+        return false
+    },
+    set() { }
 })
 
 
@@ -102,12 +118,25 @@ const hideAnchor = () => {
     data.mouseEnter = false
 }
 
-const { mouseEnter } = toRefs(data)
+const transErrorMsg = (error: NodeError) => {
+
+    switch (error) {
+        case NodeError.noStart:
+            return '没有连接到开始节点'
+        case NodeError.noEnd:
+            return '没有连接到结束节点'
+        default:
+            return '未知的错误';
+    }
+
+}
+
+// const { mouseEnter } = toRefs(data)
 
 </script>
 
 
-<style lang="less">
+<style lang="less" scoped>
 @labelColor: #409eff;
 @nodeSize: 12px;
 @nodeSizeInner: 6px;
@@ -115,8 +144,16 @@ const { mouseEnter } = toRefs(data)
 @anchorMargin: 14px;
 
 
+
 .node-item-wrapper {
 
+
+    .errors {
+        .error {
+            color: red;
+        }
+
+    }
 
     box-sizing: content-box;
 
@@ -124,7 +161,7 @@ const { mouseEnter } = toRefs(data)
     position: absolute;
     display: flex;
     height: 40px;
-    width: 120px;
+    width: 160px;
     justify-content: center;
     align-items: center;
     // border: 1px solid #b7b6b6;
@@ -196,6 +233,14 @@ const { mouseEnter } = toRefs(data)
             text-align: left;
         }
 
+        .end {
+            width: 30px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         &:hover {
             border: 1px solid rgb(48, 130, 242);
             z-index: 2000;
@@ -205,6 +250,10 @@ const { mouseEnter } = toRefs(data)
 
         &.active {
             border: 2px solid rgb(48, 130, 242);
+        }
+
+        &.error {
+            border: 1px solid red;
         }
 
     }

@@ -199,20 +199,23 @@
 import { reactive, onMounted, onUnmounted, nextTick, toRefs, ref, watch } from "vue";
 import useMemoryEffect from './hooks/useMemoryEffect'
 import FlowNode from "./FlowNode.vue";
-import jsPlumbService from "./jsPlumbService";
 import {
     jsplumbSourceOptions,
     jsplumbTargetOptions,
     jsplumbConnectOptions,
     jsplumbSetting,
 } from "./config";
-import { uuid } from "./Util";
+import { uuid } from "./Utils";
 import { NodeConfig, LineConfig } from "./types";
 import PropertyPanel from "./PropertyPanel.vue";
 import LinePanel from "./LinePanel.vue";
 import { Delete, Refresh, RefreshLeft, RefreshRight } from '@element-plus/icons-vue'
 import { flowConfig_example_a, flowConfig, flowConfig_example_b } from './tempData'
 import { ElMessage } from 'element-plus'
+
+import usePlumbService from "./hooks/usePlumbService";
+
+const { plumbService } = usePlumbService()
 
 
 /**
@@ -336,14 +339,29 @@ const setActiveNode = (item) => {
 const doCheckWorkFlow = () => {
 
 
-    jsPlumbService.checkWorkflow({
+    const errors = plumbService.checkWorkflowValidation({
         nodeList: data.nodeList,
-        connections: data.connections
+        connections: data.connections,
+        conditionValidate() {
+            return null
+        }
+    })
+
+
+    data.nodeList.forEach(v => {
+        const find = errors.nodes.find(vv => {
+            return vv.node.id === v.id
+        })
+        if (find) {
+            v.errors = find.errors
+        } else {
+            v.errors = undefined
+        }
     })
 }
 
 const doAutoLayoutWorkFlow = () => {
-    const config = jsPlumbService.autoLayoutFlow({
+    const config = plumbService.autoLayoutFlow({
         nodeList: data.nodeList,
         connections: data.connections
     })
@@ -400,7 +418,7 @@ const doClearAll = () => {
 */
 const clearAll = () => {
 
-    jsPlumbService.clearAll()
+    plumbService.clearAll()
     data.nodeList = []
 
     return new Promise((resolve) => {
@@ -436,15 +454,15 @@ let loadingNum = 0;
 */
 const loadConfig = async (config, clearActive = false) => {
 
-    jsPlumbService.setSuspendDrawing(true);
+    plumbService.setSuspendDrawing(true);
 
     // plumbIns.setSuspendDrawing(true, true);
-    if (!jsPlumbService.plumbIns) {
+    if (!plumbService.plumbIns) {
         throw new Error('plumbIns is null')
     }
 
     //在加载的时候阻止监听事件
-    jsPlumbService.setSuspendEvents(true)
+    plumbService.setSuspendEvents(true)
 
     const currentLoadingNum = ++loadingNum
 
@@ -465,10 +483,10 @@ const loadConfig = async (config, clearActive = false) => {
 
         await drawConnections(config.connections);
 
-        jsPlumbService.setSuspendDrawing(false);
+        plumbService.setSuspendDrawing(false);
 
         if (currentLoadingNum >= loadingNum) {
-            jsPlumbService.setSuspendEvents(false)
+            plumbService.setSuspendEvents(false)
         }
 
 
@@ -477,7 +495,7 @@ const loadConfig = async (config, clearActive = false) => {
 }
 
 onUnmounted(() => {
-    jsPlumbService.destroy()
+    plumbService.destroy()
 });
 
 
@@ -611,9 +629,9 @@ const deleteNodeOrLine = () => {
 };
 
 const initJsPlumb = () => {
-    jsPlumbService.setContainerId("flow-container");
+    plumbService.setContainerId("flow-container");
 
-    plumbIns = jsPlumbService.getInstance();
+    plumbIns = plumbService.getInstance();
 
 
 
@@ -626,7 +644,7 @@ const initJsPlumb = () => {
         console.log('add line', evt, data.connections)
     });
 
-    // jsPlumbService.bind()
+    // plumbService.bind()
 
     //   //连线双击删除事件
     //   this.jsPlumb.bind("dblclick",(conn, originalEvent) => {
@@ -672,7 +690,7 @@ const drawConnection = (line) => {
             // ],
             // anchor: ['Left', 'Right', 'Top', 'Bottom', [0.3, 0, 0, -1], [0.7, 0, 0, -1], [0.3, 1, 0, 1], [0.7, 1, 0, 1]],
             //@ts-ignore
-            // connector: ['StateMachine'],
+            connector: ["Flowchart", { stub: [10, 50], midpoint: 0.5 }],
             // endpoint: 'Blank',
             // overlays: [
             //     ["Label", { label: "FOO", visible: true ,id: "MyLabel",}]
