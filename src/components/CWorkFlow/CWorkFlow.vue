@@ -178,8 +178,8 @@
                 <div id="flowWrap" ref="flowWrap" class="flow-wrap" @drop="onDrop($event)" @dragover="allowDrop($event)">
                     <div id="flow-container" ref="flowContainerRef">
                         <FlowNode @click="onFlowNodeClick($event, item)" :isActive="activeNode?.id === item.id"
-                            v-for="item in data.nodes" :id="item.id" :key="item.id" :node="item"
-                            @setNodeName="setNodeName" @changeLineState="changeLineState" />
+                            v-for="item in data.nodes" :id="item.id" :key="item.id" :node="item" @setNodeName="setNodeName"
+                            @changeLineState="changeLineState" />
                     </div>
                 </div>
             </div>
@@ -257,8 +257,7 @@ useKeydown((evt) => {
 
         default:
             break;
-    }   evt.key
-
+    }
 })
 
 
@@ -311,8 +310,11 @@ const onCanvasClick = (event) => {
 
         if (labelEditor.visible) {
             const lineData = getLineDataByLineInstance(line);
-            lineData.label = labelEditor.canvas.value;
-            line.setLabel({ "label": lineData.label, "labelStyle": {}, "location": 0.5, "cssClass": "caiwf-line-label added-by-editor" })
+            if (lineData) {
+                lineData.label = labelEditor.canvas.value;
+                line.setLabel({ "label": lineData.label, "labelStyle": {}, "location": 0.5, "cssClass": "caiwf-line-label added-by-editor" })
+            }
+
         };
 
     });
