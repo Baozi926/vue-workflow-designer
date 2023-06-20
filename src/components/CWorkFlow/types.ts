@@ -1,6 +1,6 @@
 export type NodeConfig = {
   name?: String;
-  id: string | number | undefined | Symbol;
+  id: string | undefined;
   pos: {
     left: Number;
     top: Number;
@@ -12,15 +12,15 @@ export type NodeConfig = {
 
 export type LineConfig = {
   id: String | Number;
-  source: string | number | undefined | Symbol;
-  target: string | number | undefined | Symbol;
+  source: string | undefined;
+  target: string | undefined;
   label?: String;
   conditions?: any[];
   remark?: String;
 };
 
 export type FlowConfig = {
-  nodeList: NodeConfig[];
+  nodes: NodeConfig[];
   connections: LineConfig[];
 };
 

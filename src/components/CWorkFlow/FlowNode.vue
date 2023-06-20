@@ -57,6 +57,7 @@ import { defineProps, onMounted, reactive, toRef, ref, computed } from 'vue'
 
 import { Promotion, VideoPause, UserFilled, WarningFilled } from '@element-plus/icons-vue'
 import { NodeConfig, NodeError } from './types';
+import { nodeWidth, nodeHeight } from './config';
 
 const nodeDom = ref<any>(null);
 
@@ -105,7 +106,9 @@ onMounted(() => {
     }
 
     dom.style.left = pos.left + 'px';
-    dom.style.top = pos.top + 'px'
+    dom.style.top = pos.top + 'px';
+    dom.style.width = nodeWidth + 'px';
+    dom.style.height = nodeHeight + 'px';
 
 })
 
@@ -160,8 +163,8 @@ const transErrorMsg = (error: NodeError) => {
     position: relative;
     position: absolute;
     display: flex;
-    height: 40px;
-    width: 160px;
+    // height: 40px;
+    // width: 160px;
     justify-content: center;
     align-items: center;
     // border: 1px solid #b7b6b6;
@@ -213,6 +216,9 @@ const transErrorMsg = (error: NodeError) => {
         background: #fff;
         box-shadow: rgba(6, 30, 53, 0.1) 0px 1px 2px 1px;
         color: black;
+        border-style: solid;
+        border-color: transparent;
+        border-width: 1px;
 
         .start {
             color: rgb(48, 130, 242);
@@ -241,19 +247,24 @@ const transErrorMsg = (error: NodeError) => {
             justify-content: center;
         }
 
+        // border: 1px solid rgb(48, 130, 242);
+
         &:hover {
-            border: 1px solid rgb(48, 130, 242);
+            border-color: rgb(48, 130, 242);
             z-index: 2000;
             border-width: 1px;
             box-shadow: 0 0 0 3px rgba(48, 129, 242, .2);
         }
 
         &.active {
-            border: 2px solid rgb(48, 130, 242);
+            border-color: rgb(48, 130, 242);
+            // border: 2px solid rgb(48, 130, 242);
+
+            border-width: 2px;
         }
 
         &.error {
-            border: 1px solid red;
+            border-color: red;
         }
 
     }

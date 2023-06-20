@@ -108,4 +108,28 @@ export const endPointStyle = {
 };
 
 
+export const nodeWidth = 160
+export const nodeHeight = 40
+
+
+export const nodeTypeList = [
+  {
+      type: "start",
+      name: "流程开始",
+  },
+  {
+      type: "end",
+      name: "流程结束",
+  },
+  {
+      type: "node",
+      name: "审批",
+  }, {
+      type: "sendCopy",
+      name: "抄送",
+  }, {
+      type: "childFlow",
+      name: "子流程",
+  },
+]
  

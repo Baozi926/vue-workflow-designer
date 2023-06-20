@@ -18,7 +18,7 @@ const _getAnsestors = (
     return v.target === node.id;
   });
 
-  const parents = config.nodeList.filter((v) => {
+  const parents = config.nodes.filter((v) => {
     return connections.some((vv) => {
       return vv.source === v.id;
     });
@@ -57,7 +57,7 @@ const getChildren = (node: NodeConfig, config: FlowConfig) => {
       return v.target;
     });
 
-  return config.nodeList.filter((v) => {
+  return config.nodes.filter((v) => {
     return childrenId.includes(v.id);
   });
 };
@@ -184,7 +184,7 @@ class PlumbService {
       connections: [],
     };
 
-    config.nodeList.forEach((v) => {
+    config.nodes.forEach((v) => {
       if (v.type !== NodeTypes.start) {
         const res = this.checkNodeValidation(
           v,
@@ -215,7 +215,7 @@ class PlumbService {
 
     const nodeWidth = 120;
 
-    const startNode = config.nodeList.find((v) => {
+    const startNode = config.nodes.find((v) => {
       return v.type === NodeTypes.start;
     });
 
@@ -258,7 +258,7 @@ class PlumbService {
 
     layoutChildren(startNode, 1, config, { width, startTop });
 
-    const endNode = config.nodeList.find((v) => {
+    const endNode = config.nodes.find((v) => {
       return v.type === "end";
     });
 

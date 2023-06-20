@@ -145,7 +145,7 @@
                     <ElButton @click="doUndo" :icon="RefreshLeft" class="button">撤销</ElButton>
                     <ElButton @click="doRedo" :icon="RefreshRight" class="button">重做</ElButton>
 
-                    <ElButton type="danger" :icon="Delete" @click="deleteNodeOrLine" class="button">删除</ElButton>
+                    <ElButton type="danger" :icon="Delete" @click="doDeleteNodeOrLine" class="button">删除</ElButton>
                 </div>
                 <div class="main"></div>
                 <div class="end">
@@ -178,7 +178,7 @@
                 <div id="flowWrap" ref="flowWrap" class="flow-wrap" @drop="onDrop($event)" @dragover="allowDrop($event)">
                     <div id="flow-container" ref="flowContainerRef">
                         <FlowNode @click="onFlowNodeClick($event, item)" :isActive="activeNode?.id === item.id"
-                            v-for="item in data.nodeList" :id="item.id" :key="item.id" :node="item"
+                            v-for="item in data.nodes" :id="item.id" :key="item.id" :node="item"
                             @setNodeName="setNodeName" @changeLineState="changeLineState" />
                     </div>
                 </div>
@@ -204,6 +204,8 @@ import {
     jsplumbTargetOptions,
     jsplumbConnectOptions,
     jsplumbSetting,
+    nodeTypeList, nodeHeight, nodeWidth
+
 } from "./config";
 import { uuid } from "./Utils";
 import { NodeConfig, LineConfig } from "./types";
@@ -214,6 +216,7 @@ import { flowConfig_example_a, flowConfig, flowConfig_example_b } from './tempDa
 import { ElMessage } from 'element-plus'
 
 import usePlumbService from "./hooks/usePlumbService";
+import useKeydown from './hooks/useKeydown'
 
 const { plumbService } = usePlumbService()
 
@@ -243,11 +246,26 @@ const copyToClipboard = (str) => {
 };
 
 
+useKeydown((evt) => {
+
+    const key = evt.key;
+
+    switch (key) {
+        case 'Backspace':
+            doDeleteNodeOrLine()
+            break;
+
+        default:
+            break;
+    }   evt.key
+
+})
+
 
 
 const copyConfig = () => {
     const config = {
-        nodeList: data.nodeList,
+        nodes: data.nodes,
         connections: data.connections,
     };
 
@@ -257,7 +275,7 @@ const copyConfig = () => {
 };
 
 const data: {
-    nodeList: NodeConfig[];
+    nodes: NodeConfig[];
     connections: any[];
     menus: any[];
     currentItem?: any;
@@ -265,28 +283,9 @@ const data: {
     activeLine?: LineConfig | null;
 } = reactive({
     // ...flowConfig,
-    nodeList: [],
+    nodes: [],
     connections: [],
-    menus: [
-        {
-            type: "start",
-            name: "流程开始",
-        },
-        {
-            type: "end",
-            name: "流程结束",
-        },
-        {
-            type: "node",
-            name: "审批",
-        }, {
-            type: "sendCopy",
-            name: "抄送",
-        }, {
-            type: "childFlow",
-            name: "子流程",
-        },
-    ],
+    menus: nodeTypeList,
     currentItem: null,
     activeNode: null,
     activeLine: null,
@@ -340,7 +339,7 @@ const doCheckWorkFlow = () => {
 
 
     const errors = plumbService.checkWorkflowValidation({
-        nodeList: data.nodeList,
+        nodes: data.nodes,
         connections: data.connections,
         conditionValidate() {
             return null
@@ -348,7 +347,7 @@ const doCheckWorkFlow = () => {
     })
 
 
-    data.nodeList.forEach(v => {
+    data.nodes.forEach(v => {
         const find = errors.nodes.find(vv => {
             return vv.node.id === v.id
         })
@@ -362,7 +361,7 @@ const doCheckWorkFlow = () => {
 
 const doAutoLayoutWorkFlow = () => {
     const config = plumbService.autoLayoutFlow({
-        nodeList: data.nodeList,
+        nodes: data.nodes,
         connections: data.connections
     })
 
@@ -419,7 +418,7 @@ const doClearAll = () => {
 const clearAll = () => {
 
     plumbService.clearAll()
-    data.nodeList = []
+    data.nodes = []
 
     return new Promise((resolve) => {
         nextTick(() => {
@@ -469,7 +468,7 @@ const loadConfig = async (config, clearActive = false) => {
 
     await clearAll()
 
-    data.nodeList = config.nodeList;
+    data.nodes = config.nodes;
 
     data.connections = config.connections;
 
@@ -479,7 +478,7 @@ const loadConfig = async (config, clearActive = false) => {
     }
 
     nextTick(async () => {
-        await initNodes(data.nodeList);
+        await initNodes(data.nodes);
 
         await drawConnections(config.connections);
 
@@ -503,7 +502,7 @@ onUnmounted(() => {
 const { updateMemory, clearMemory, undo, redo } = useMemoryEffect({
     getData: () => {
         return {
-            nodeList: data.nodeList,
+            nodes: data.nodes,
             connections: data.connections
         }
     }
@@ -550,10 +549,7 @@ const doUndo = () => {
 
 
 
-const deleteNodeOrLine = () => {
-
-
-
+const doDeleteNodeOrLine = () => {
 
     updateMemory()
 
@@ -622,7 +618,7 @@ const deleteNodeOrLine = () => {
         });
 
         //删除节点
-        data.nodeList = data.nodeList.filter((v) => {
+        data.nodes = data.nodes.filter((v) => {
             return v.id !== activeNode.id;
         });
     }
@@ -727,9 +723,9 @@ const drawConnections = (connections) => {
     });
 }
 
-const initNodes = (nodeList) => {
+const initNodes = (nodes) => {
 
-    const promises = nodeList.map((v) => {
+    const promises = nodes.map((v) => {
         return initNode(v);
     });
 
@@ -794,7 +790,7 @@ const dragstart = (evt, menu) => {
 const addNode = (params) => {
     updateMemory();
 
-    data.nodeList.push(params);
+    data.nodes.push(params);
     initNode(params);
 };
 
@@ -819,7 +815,7 @@ const initNode = (params) => {
 
                     updateMemory()
 
-                    data.nodeList.some((vv) => {
+                    data.nodes.some((vv) => {
                         if (nodeId == vv.id) {
                             vv.pos.left = pos[0];
                             vv.pos.top = pos[1];
@@ -851,8 +847,8 @@ const onDrop = (event) => {
             name: currentItem.name,
             id: uuid(),
             pos: {
-                top: top - 20,
-                left: left - 60,
+                top: top - nodeHeight / 2,
+                left: left - nodeWidth / 2,
             },
         };
         // this.

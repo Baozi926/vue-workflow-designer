@@ -1,5 +1,5 @@
 export const flowConfig = {
-  nodeList: [
+  nodes: [
     { id: "1", name: "上级领导", pos: { left: 360, top: 175 } },
     { id: "2", name: "HR", pos: { left: 100, top: 260 } },
     {
@@ -74,7 +74,7 @@ export const flowConfig = {
 };
 
 export const flowConfig_example_a = {
-  nodeList: [
+  nodes: [
     { id: "1", name: "上级领导", pos: { left: 360, top: 230 } },
     {
       type: "start",
@@ -108,7 +108,7 @@ export const flowConfig_example_a = {
 };
 
 export const flowConfig_example_b = {
-  nodeList: [
+  nodes: [
     { id: "1", name: "上级领导", pos: { left: 360, top: 175 } },
     { id: "2", name: "HR", pos: { left: 100, top: 260 } },
     {
