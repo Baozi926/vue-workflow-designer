@@ -11,7 +11,9 @@
         }
 
         .end {
+            display: flex;
             margin-left: auto;
+            align-items: center;
         }
 
         align-items: center;
@@ -70,6 +72,27 @@
 
         .toolbox {
             width: 100%;
+            display: flex;
+
+            .zoom-wrapper {
+                // width: 120px;
+                color: black;
+                flex-direction: row;
+                display: flex;
+                white-space: nowrap;
+
+                .zoom-input {
+                    width: 120px;
+                }
+
+                .zoom-label {
+                    margin-right: 10px;
+                    display: flex;
+                    align-items: center;
+                }
+
+                padding: 10px;
+            }
         }
     }
 
@@ -147,9 +170,26 @@
 
                     <ElButton type="danger" :icon="Delete" @click="doDeleteNodeOrLine" class="button">删除</ElButton>
                 </div>
-                <div class="main"></div>
+                <div class="main">
+
+                </div>
                 <div class="end">
+                    <div class="zoom-wrapper">
+                        <div class="zoom-label">缩放:</div>
+                        <el-input-number class="zoom-input" v-model="zoom" :step="0.1" :min="0" :max="1"
+                            @change="onZoomChange" />
+                    </div>
                     <ElButton @click="copyConfig" class="button">拷贝配置</ElButton>
+                    <el-popover placement="bottom" :width="400" trigger="click">
+                        <template #reference>
+                            <ElButton @click="viewConfig" class="button">显示配置</ElButton>
+                        </template>
+                        <div style="max-height:50vh;overflow-y: auto;" ref="configJSONRef">
+
+                            
+                        </div>
+                    </el-popover>
+
                     <ElButton @click="loadConfigExample_1" class="button">载入配置1</ElButton>
                     <ElButton @click="loadConfigExample_2" class="button">载入配置2</ElButton>
                     <ElButton @click="loadConfigExample_3" class="button">载入配置3</ElButton>
@@ -217,8 +257,12 @@ import { ElMessage } from 'element-plus'
 
 import usePlumbService from "./hooks/usePlumbService";
 import useKeydown from './hooks/useKeydown'
+import JSONFormatter from 'json-formatter-js'
 
 const { plumbService } = usePlumbService()
+
+//@ts-ignore
+window.plumbService = plumbService
 
 
 /**
@@ -226,6 +270,8 @@ const { plumbService } = usePlumbService()
  * 
 */
 const flowContainerRef = ref<null | HTMLElement>();
+
+const configJSONRef = ref<null | HTMLElement>();
 
 const onFlowNodeClick = (event, item) => {
     event.preventDefault();
@@ -245,6 +291,21 @@ const copyToClipboard = (str) => {
     document.body.removeChild(el);
 };
 
+const onZoomChange = (val) => {
+
+    const dom = flowContainerRef.value;
+    if (!dom) {
+        return
+    }
+
+
+    dom.style.transform = `scale(${val})`
+
+    plumbService.plumbIns?.setZoom(val)
+
+
+}
+
 
 useKeydown((evt) => {
 
@@ -259,6 +320,21 @@ useKeydown((evt) => {
             break;
     }
 })
+
+const viewConfig = () => {
+
+    const formatter = new JSONFormatter({ nodes: data.nodes, connections: data.connections }, 3);
+
+    const dom = configJSONRef.value
+    if (dom) {
+        dom.innerHTML = ""
+        dom.appendChild(formatter.render());
+    }
+
+
+
+
+}
 
 
 
@@ -280,6 +356,7 @@ const data: {
     currentItem?: any;
     activeNode?: NodeConfig | null;
     activeLine?: LineConfig | null;
+    zoom: number
 } = reactive({
     // ...flowConfig,
     nodes: [],
@@ -288,6 +365,7 @@ const data: {
     currentItem: null,
     activeNode: null,
     activeLine: null,
+    zoom: 1
 });
 
 let plumbIns;
@@ -348,6 +426,16 @@ const doCheckWorkFlow = () => {
         }
     })
 
+    if (errors.nodes.length === 0 && errors.connections.length === 0) {
+
+        ElMessage({
+            message: '检测通过！',
+            type: 'success',
+            duration: 3000
+        })
+
+    }
+
 
     data.nodes.forEach(v => {
         const find = errors.nodes.find(vv => {
@@ -375,11 +463,9 @@ const setActiveLine = (conn) => {
 
     if (conn) {
         lineData = data.connections.find((v) => {
-            return v.source === conn.sourceId && v.target === conn.targetId;
+            const lineId = getConnectionId(conn)
+            return v.id === lineId;
         });
-
-
-
     }
 
     data.activeLine = lineData;
@@ -560,9 +646,8 @@ const doDeleteNodeOrLine = () => {
     //线
     if (activeLine) {
         const lineIns = plumbIns.getAllConnections().find((v) => {
-            return (
-                v.sourceId === activeLine.source && v.targetId === activeLine.target
-            );
+            const lineId = getConnectionId(v);
+            return lineId === activeLine.id;
         });
 
         plumbIns.deleteConnection(lineIns);
@@ -637,8 +722,17 @@ const initJsPlumb = () => {
 
     plumbIns.unbind("connection");
     // 连线创建成功后，维护本地数据
-    plumbIns.bind("connection", (evt, aa) => {
-        addLine(evt);
+    plumbIns.bind("connection", (evt) => {
+        const data = evt.connection.getData();
+        //如果data中没有id，就创建
+        if (!data.id) {
+            evt.connection.setData({
+                ...data,
+                id: uuid()
+            })
+        }
+
+        addLine(evt.connection);
         console.log('add line', evt, data.connections)
     });
 
@@ -650,7 +744,7 @@ const initJsPlumb = () => {
     //   })
     //断开连线后，维护本地数据
     plumbIns.bind("connectionDetached", (evt) => {
-        deleteLineFromData(evt);
+        deleteLineFromData(evt.connection);
         console.log('delete line', evt, data.connections);
     });
 
@@ -682,6 +776,9 @@ const drawConnection = (line) => {
             source: line.source,
             target: line.target,
             label: line.label,
+            data: {
+                id: line.id
+            },
             // ConnectionOverlays: [
             //     ["Label", { label: "1", id: "MyLabel", cssClass: "aLabel", location: 0.15, }],
             //     // ["Label", { label: "1", id: "label-2", cssClass: "aLabel", location: 0.85, }]
@@ -756,14 +853,25 @@ onMounted(async () => {
 });
 
 
-const addLine = (line) => {
+const getConnectionId = (connection) => {
+    return connection.getData().id;
+}
+
+
+const addLine = (connection) => {
+
     updateMemory()
+    const id = connection.getData().id;
+
+    if (!id) {
+        throw new Error('id must not be null!')
+    }
 
     data.connections.push({
-        source: line.source.id,
-        target: line.target.id,
-        label: line.connection.getLabel(),
-        id: uuid(),
+        source: connection.source.id,
+        target: connection.target.id,
+        label: connection.getLabel(),
+        id: id,
         remark: "",
     });
 };
@@ -773,9 +881,10 @@ const addLine = (line) => {
  * 删除数据中的线
  * 
 */
-const deleteLineFromData = (line) => {
+const deleteLineFromData = (conn) => {
     data.connections = data.connections.filter((item) => {
-        return !(item.source === line.sourceId && item.target === line.targetId);
+        const lineId = getConnectionId(conn);
+        return lineId !== item.id;
     });
 
 
@@ -863,5 +972,5 @@ const allowDrop = (evt) => {
     return true;
 };
 
-const { activeNode, activeLine } = toRefs(data);
+const { activeNode, activeLine, zoom } = toRefs(data);
 </script>

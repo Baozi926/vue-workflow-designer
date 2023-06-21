@@ -12,10 +12,3 @@ export function uuid(randomLength = 8) {
 }
 
 
-
-
-export function loopTree(tree,cb,{children}){
-
-
-
-}
