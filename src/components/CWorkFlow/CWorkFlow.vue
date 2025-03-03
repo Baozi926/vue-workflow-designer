@@ -186,7 +186,7 @@
                         </template>
                         <div style="max-height:50vh;overflow-y: auto;" ref="configJSONRef">
 
-                            
+
                         </div>
                     </el-popover>
 
@@ -247,7 +247,7 @@ import {
     nodeTypeList, nodeHeight, nodeWidth
 
 } from "./config";
-import { uuid } from "./Utils";
+import { uuid, deepCloneJSON } from "./Utils";
 import { NodeConfig, LineConfig } from "./types";
 import PropertyPanel from "./PropertyPanel.vue";
 import LinePanel from "./LinePanel.vue";
@@ -528,7 +528,7 @@ const loadConfigExample_3 = () => {
 
 const loadConfigExample_1 = () => {
 
-    loadConfig(flowConfig, true)
+    loadConfig(deepCloneJSON(flowConfig), true)
 
 }
 
@@ -833,7 +833,7 @@ const initNodes = (nodes) => {
 }
 
 const getFlowConfig = async () => {
-    return flowConfig
+    return deepCloneJSON(flowConfig)
 }
 
 onMounted(async () => {
